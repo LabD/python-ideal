@@ -4,8 +4,9 @@ import hashlib
 import base64
 import logging
 from io import BytesIO
+import six
 
-import M2Crypto
+from OpenSSL import crypto
 from lxml import etree
 
 from ideal.utils import render_to_string, IDEAL_NAMESPACES
@@ -23,13 +24,15 @@ class Security(object):
 
         :return: Fingerprint as a string.
         """
-        cert = M2Crypto.X509.load_cert(private_certificate)
-        fingerprint = cert.get_fingerprint('sha1')
+        cert_data = open(private_certificate, "rb").read()
+        cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
+        sha1_fingerprint = cert.digest("sha1")
 
-        del cert
+        fingerprint = sha1_fingerprint.zfill(40).lower().replace(":", "")
 
-        # Fill the fingerprint with zero's upto 40 chars.
-        return fingerprint.zfill(40).lower()
+        del cert_data, cert
+
+        return fingerprint
 
     def get_message_digest(self, msg, digest_method=None):
         """
@@ -57,8 +60,7 @@ class Security(object):
 
         :return: Base 64 encoded signature.
         """
-
-        if type(signed_info) == unicode:
+        if type(signed_info) == six.text_type:
             signed_info = signed_info.encode('utf-8')
 
         signed_info_tree = etree.parse(BytesIO(signed_info))
@@ -66,17 +68,15 @@ class Security(object):
         signed_info_tree.write_c14n(f, exclusive=True)
         signed_info_str = f.getvalue()
 
-        key = M2Crypto.EVP.load_key(private_key, lambda x: password)
-        key.reset_context('sha256')
+        privatekey_data = open(private_key, "rb").read()
+        pkey = crypto.load_privatekey(
+            crypto.FILETYPE_PEM, privatekey_data, password)
 
-        key.sign_init()
-        key.sign_update(signed_info_str)
+        sign = crypto.sign(pkey, signed_info_str, "sha256")
 
-        signature = key.sign_final()
+        del pkey
 
-        del key
-
-        return signature.encode('base64').rstrip('\n')
+        return sign.encode('base64').rstrip('\n')
 
     def sign_message(self, msg, private_certificate, private_key, password):
         """
@@ -159,18 +159,19 @@ class Security(object):
             # certificates.
             if key_name.lower() == self.get_fingerprint(cert_file):
 
-                # Verify signature.
-                certificate = M2Crypto.X509.load_cert(cert_file)
-                public_key = certificate.get_pubkey()
+                cert_data = open(cert_file, "rb").read()
+                # pkey = crypto.load_publickey(crypto.FILETYPE_PEM, cert_data)
+                cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
+                x509 = crypto.X509()
+                x509.set_pubkey(cert.get_pubkey())
 
-                # TODO: Use the signature (or message digest?) method for verification (currently using sha256).
-                public_key.reset_context(md='sha256')
-                public_key.verify_init()
-                public_key.verify_update(signed_info_str)
+                verify = crypto.verify(
+                    x509, signature_value.decode('base64'),
+                    signed_info_str, 'sha256')
 
-                result = public_key.verify_final(signature_value.decode('base64'))
-                del certificate, public_key
+                del cert_data, cert, x509
 
-                return result == 1
+                # it will return None when it's been verified
+                return verify is None
 
         return False
