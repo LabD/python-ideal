@@ -1,5 +1,10 @@
 import os
-import ConfigParser
+import six
+
+if six.PY2:
+    import ConfigParser as configparser
+else:
+    import configparser
 
 from ideal.exceptions import IdealConfigurationException
 
@@ -109,7 +114,7 @@ class Settings(object):
         :param config_file: Configuration file. The section ``[ideal]`` should contain all options.
         """
 
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(config_file)
 
         for setting_name in self.options():
