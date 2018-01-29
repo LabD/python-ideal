@@ -17,7 +17,7 @@ install_requires = [
     'requests>=1.2.0',
     'lxml',
     'python-dateutil',
-    'M2Crypto>=0.21'
+    'pyOpenSSL'
 ]
 tests_require = [
     'nose',
@@ -51,10 +51,9 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Software Development',
     ],
 )
