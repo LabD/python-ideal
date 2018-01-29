@@ -290,7 +290,7 @@ class IdealClient(object):
 
         try:
             xml_document = etree.parse(BytesIO(response.content))
-        except XMLSyntaxError, e:
+        except XMLSyntaxError as e:
             raise IdealServerException('iDEAL response could not be parsed: {error}'.format(error=e))
 
         response.xml = xml_document
