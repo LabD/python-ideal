@@ -335,7 +335,7 @@ class IdealClient(object):
         response = self.create_response(raw_response.headers, raw_response.content, raw_response.status_code, request)
 
         # If logging is set to DEBUG, don't log this. All details are logged in DEBUG level above.
-        if logging >= logging.INFO:
+        if logger.level >= logging.INFO:
             logger.info('%(request_method)s %(url)s (HTTP %(response_status)s)', {
                 'request_method': request.method,
                 'url': request.uri,
