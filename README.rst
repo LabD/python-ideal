@@ -102,12 +102,8 @@ Django
 
 2. Add ``ideal.contrib.django.ideal_compat`` to your ``INSTALLED_APPS``.
 
-3. Run ``python manage.py syncdb`` (or ``migrate``) to create the ``Issuer`` table in your database, to store a local
-   copy of all issuers.
 
-4. Run ``python manage.py sync_issuers`` to fill the ``Issuer`` table with a list of issuers.
-
-5. You should create a view to handle the iDEAL callback and add the URL (as defined in your settings as
+3. You should create a view to handle the iDEAL callback and add the URL (as defined in your settings as
    ``MERCHANT_RETURN_URL``) to your ``urls.py``. Below, you'll find an example view to redirect the use depending on the
    transaction status::
 
@@ -137,7 +133,7 @@ Django
             # Redirect to some view with a failure message.
             return '<payment failed url>'
 
-6. Optionally, you can add the the following to your main ``urls.py`` to test your configuration and perform all iDEAL
+4. Optionally, you can add the the following to your main ``urls.py`` to test your configuration and perform all iDEAL
    operations via a web interface::
 
     if settings.DEBUG:
@@ -145,5 +141,5 @@ Django
             (r'^ideal/tests/', include('ideal.contrib.django.ideal_compat.test_urls')),
         )
 
-7. If you are in DEBUG mode and use ``runserver``, you can point your browser to:
+5. If you are in DEBUG mode and use ``runserver``, you can point your browser to:
    ``http://localhost:8000/ideal/tests/``.
