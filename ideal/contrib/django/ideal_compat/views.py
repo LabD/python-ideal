@@ -39,7 +39,7 @@ class IndexView(TemplateView):
 
         try:
             client = IdealClient()
-        except IdealConfigurationException, e:
+        except IdealConfigurationException as e:
             context.update({
                 'error_message': 'Cannot read configuration: {msg}'.format(msg=e.message)
             })
@@ -80,7 +80,7 @@ class GetIssuersView(FormView, IdealViewMixin):
 
         try:
             response = self.client.get_issuers()
-        except IdealException, e:
+        except IdealException as e:
             error_message = e.message
 
         return self.render_to_response(self.get_context_data(form=form, response=response, error_message=error_message))
@@ -133,7 +133,7 @@ class StartTransactionView(FormView, IdealViewMixin):
 
         try:
             response = self.client.start_transaction(**kwargs)
-        except IdealException, e:
+        except IdealException as e:
             error_message = e.message
 
         return self.render_to_response(self.get_context_data(form=form, response=response, error_message=error_message))
@@ -167,7 +167,7 @@ class GetTransactionStatusView(FormView, IdealViewMixin):
 
         try:
             response = self.client.get_transaction_status(form.cleaned_data['transaction_id'])
-        except IdealException, e:
+        except IdealException as e:
             error_message = e.message
 
         return self.render_to_response(self.get_context_data(form=form, response=response, error_message=error_message))
