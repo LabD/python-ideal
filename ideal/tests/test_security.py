@@ -1,4 +1,4 @@
-#-*- encoding: utf8 -*-
+# -*- encoding: utf8 -*-
 import os
 
 from unittest2 import TestCase
@@ -31,7 +31,7 @@ class SecurityTests(TestCase):
         """
         Test the XML message KeyName value (or fingerprint).
         """
-        expected_fingerprint = '132df198e31e4443e228da75c9299dded61aef10'
+        expected_fingerprint = b'132df198e31e4443e228da75c9299dded61aef10'
         fingerprint = self.security.get_fingerprint(self.cert_filepath)
 
         self.assertEqual(expected_fingerprint, fingerprint)
@@ -40,7 +40,7 @@ class SecurityTests(TestCase):
         """
         Test the XML message DigestValue.
         """
-        expected_message_digest = 'Z61204hpQi+arvC1/3u78POWh2IcAGsPnjfla+2AcTc='
+        expected_message_digest = b'Z61204hpQi+arvC1/3u78POWh2IcAGsPnjfla+2AcTc='
         message_digest = self.security.get_message_digest(self.unsigned_message)
 
         self.assertEqual(expected_message_digest, message_digest)
@@ -51,14 +51,10 @@ class SecurityTests(TestCase):
         """
         message_digest = self.security.get_message_digest(self.unsigned_message)
         signed_info = render_to_string('templates/signed_info.xml', {
-            'digest_value': message_digest
+            'digest_value': str(message_digest, 'utf-8')
         })
 
-        expected_signature = """hmsonk9o7QMUlrVyewEC7+u76I7dy4S4aIuno9/Sj2J7Okfv0XUsGd2Sw7YU7zRy3yKdpHhbtMFt
-QhEsqm/eFBnzd1M+JpdUpAW60vBfa/lQ/RnwX6mBjl3r2vxhUVd3T8BFnnmh5qQ74AjvCYZ6eFXs
-rq4w6b1v+IQZHknC7qQeWX56VDuTv6ezZ4nnAIr2jL//xv3iaOsYRrSK0jRVU6cJyXqhkKEvIQHK
-FkOnJZt7BfQbMQ5goqbqdL3UI+U98bj/1/PTVDxYBvyK26YltX6X3tNB1ovI61BdxMXD/P35mvIq
-2fUJ3IeL0CGw1Epo34na9VtO7+tyIzedfysjUg=="""
+        expected_signature = b"""hmsonk9o7QMUlrVyewEC7+u76I7dy4S4aIuno9/Sj2J7Okfv0XUsGd2Sw7YU7zRy3yKdpHhbtMFtQhEsqm/eFBnzd1M+JpdUpAW60vBfa/lQ/RnwX6mBjl3r2vxhUVd3T8BFnnmh5qQ74AjvCYZ6eFXsrq4w6b1v+IQZHknC7qQeWX56VDuTv6ezZ4nnAIr2jL//xv3iaOsYRrSK0jRVU6cJyXqhkKEvIQHKFkOnJZt7BfQbMQ5goqbqdL3UI+U98bj/1/PTVDxYBvyK26YltX6X3tNB1ovI61BdxMXD/P35mvIq2fUJ3IeL0CGw1Epo34na9VtO7+tyIzedfysjUg=="""
 
         signature = self.security.get_signature(signed_info, self.priv_filepath, 'example')
 
@@ -70,7 +66,7 @@ FkOnJZt7BfQbMQ5goqbqdL3UI+U98bj/1/PTVDxYBvyK26YltX6X3tNB1ovI61BdxMXD/P35mvIq
         """
         unsigned_msg_body, unsigned_msg_closing = self.unsigned_message.rsplit('<', 1)
         unsigned_msg_closing = '<' + unsigned_msg_closing
-        message_digest = self.security.get_message_digest(self.unsigned_message)
+        message_digest = str(self.security.get_message_digest(self.unsigned_message), 'utf-8')
         signed_info = render_to_string('templates/signed_info.xml', {'digest_value': message_digest})
         signature = self.security.get_signature(signed_info, self.priv_filepath, 'example')
         fingerprint = self.security.get_fingerprint(self.cert_filepath)
@@ -84,8 +80,8 @@ FkOnJZt7BfQbMQ5goqbqdL3UI+U98bj/1/PTVDxYBvyK26YltX6X3tNB1ovI61BdxMXD/P35mvIq
 </Signature>{msg_closing}""".format(
             msg_body=unsigned_msg_body,
             signed_info=signed_info,
-            signature_value=signature,
-            key_name=fingerprint,
+            signature_value=str(signature, 'utf-8'),
+            key_name=str(fingerprint, 'utf-8'),
             msg_closing=unsigned_msg_closing
         )
 
@@ -101,5 +97,5 @@ FkOnJZt7BfQbMQ5goqbqdL3UI+U98bj/1/PTVDxYBvyK26YltX6X3tNB1ovI61BdxMXD/P35mvIq
 
         # NOTE: Normally, you would want to verify if a response came from the acquirer (ie. ideal_v3.cer) but for
         # testing we simply use our own dummy certificate.
-        result = self.security.verify(signed_message, [self.cert_filepath])
+        result = self.security.verify(signed_message.encode('utf-8'), [self.cert_filepath])
         self.assertTrue(result)

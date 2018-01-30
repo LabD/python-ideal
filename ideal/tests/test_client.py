@@ -45,6 +45,8 @@ class MockIdealClient(IdealClient):
         if response_content is None:
             response_content = self._load_example('ideal_error_response.xml')
 
+        response_content = response_content.encode('utf-8')
+
         return self.create_response({'Server': 'Mock Ideal Server'}, response_content, 200, request)
 
 

@@ -28,7 +28,7 @@ class Security(object):
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
         sha1_fingerprint = cert.digest("sha1")
 
-        fingerprint = sha1_fingerprint.zfill(40).lower().replace(":", "")
+        fingerprint = sha1_fingerprint.zfill(40).lower().replace(b":", b"")
 
         del cert_data, cert
 
@@ -47,7 +47,10 @@ class Security(object):
             digest_method = 'sha256'
 
         digest_func = getattr(hashlib, digest_method.split('#')[-1])
-        return base64.b64encode(digest_func(msg).digest())
+
+        hashed = digest_func(msg.encode('utf-8'))
+
+        return base64.b64encode(hashed.digest())
 
     def get_signature(self, signed_info, private_key, password):
         """
@@ -60,15 +63,19 @@ class Security(object):
 
         :return: Base 64 encoded signature.
         """
-        if type(signed_info) == six.text_type:
+        if isinstance(signed_info, six.text_type):
             signed_info = signed_info.encode('utf-8')
+
+        if isinstance(password, six.text_type):
+            password = password.encode('utf-8')
 
         signed_info_tree = etree.parse(BytesIO(signed_info))
         f = BytesIO()
         signed_info_tree.write_c14n(f, exclusive=True)
         signed_info_str = f.getvalue()
 
-        privatekey_data = open(private_key, "rb").read()
+        privatekey_data = open(private_key, "r").read()
+
         pkey = crypto.load_privatekey(
             crypto.FILETYPE_PEM, privatekey_data, password)
 
@@ -76,7 +83,7 @@ class Security(object):
 
         del pkey
 
-        return sign.encode('base64').rstrip('\n')
+        return base64.b64encode(sign)
 
     def sign_message(self, msg, private_certificate, private_key, password):
         """
@@ -89,14 +96,16 @@ class Security(object):
 
         :return: The signed message.
         """
+
         signed_info = render_to_string('templates/signed_info.xml', {
-            'digest_value': self.get_message_digest(msg)
+            'digest_value': str(self.get_message_digest(msg), 'utf-8')
         })
 
         signature = render_to_string('templates/signature.xml', {
             'signed_info': signed_info,
-            'signature_value': self.get_signature(signed_info, private_key, password),
-            'key_name': self.get_fingerprint(private_certificate),
+            'signature_value': str(self.get_signature(
+                signed_info, private_key, password), 'utf-8'),
+            'key_name': str(self.get_fingerprint(private_certificate), 'utf-8'),
         })
 
         content, container_end = msg.rsplit('<', 1)
@@ -112,16 +121,14 @@ class Security(object):
 
         :return: ``True``, if verification succeded. ``False`` otherwise.
         """
-        if type(xml_document) == unicode:
-            xml_document = xml_document.encode('utf-8')
+
+        # Remove the signature, strip the XML header and strip trailing newlines.
+        unsigned_xml = re.sub(re.compile('<\?.*\?>\n?|<Signature.*</Signature>', flags=re.DOTALL), '', str(xml_document, 'utf-8')).rstrip('\n')
 
         xml_tree = etree.parse(BytesIO(xml_document))
 
         signature = xml_tree.xpath('xmldsig:Signature', namespaces=IDEAL_NAMESPACES)[0]
         signed_info = signature.xpath('xmldsig:SignedInfo', namespaces=IDEAL_NAMESPACES)[0]
-
-        # Remove the signature, strip the XML header and strip trailing newlines.
-        unsigned_xml = re.sub(re.compile('<\?.*\?>\n?|<Signature.*</Signature>', flags=re.DOTALL), '', xml_document).rstrip('\n')
 
         digest_method = signed_info.xpath('xmldsig:Reference/xmldsig:DigestMethod',
                 namespaces=IDEAL_NAMESPACES)[0].get('Algorithm')
@@ -130,7 +137,7 @@ class Security(object):
                 namespaces=IDEAL_NAMESPACES)[0].text
 
         # Verify message digest: Signature should be about the unsigned XML.
-        if digest_value != self.get_message_digest(unsigned_xml, digest_method):
+        if digest_value.encode('utf-8') != self.get_message_digest(unsigned_xml, digest_method):
             return False
 
         # Get signature properties.
@@ -145,6 +152,8 @@ class Security(object):
         signature_value = signature.xpath('xmldsig:SignatureValue', namespaces=IDEAL_NAMESPACES)[0].text
         key_name = signature.xpath('xmldsig:KeyInfo/xmldsig:KeyName', namespaces=IDEAL_NAMESPACES)[0].text
 
+        key_name = key_name.encode('utf-8').lower()
+
         # Apply canonicalization.
         signed_info_tree = etree.ElementTree(signed_info)
         f = BytesIO()
@@ -157,7 +166,7 @@ class Security(object):
         for cert_file in certificates:
             # Match the given XML signature's fingerprint (KeyName) with the fingerprints of one of the installed
             # certificates.
-            if key_name.lower() == self.get_fingerprint(cert_file):
+            if key_name == self.get_fingerprint(cert_file):
 
                 cert_data = open(cert_file, "rb").read()
                 # pkey = crypto.load_publickey(crypto.FILETYPE_PEM, cert_data)
@@ -166,7 +175,7 @@ class Security(object):
                 x509.set_pubkey(cert.get_pubkey())
 
                 verify = crypto.verify(
-                    x509, signature_value.decode('base64'),
+                    x509, base64.b64decode(signature_value),
                     signed_info_str, 'sha256')
 
                 del cert_data, cert, x509

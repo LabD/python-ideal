@@ -385,7 +385,8 @@ class IdealClient(object):
         if language is None:
             language = settings.LANGUAGE
         if entrance_code is None:
-            entrance_code = hashlib.sha1(uuid.uuid4().hex).hexdigest()
+            entrance_code = hashlib.sha1(
+                uuid.uuid4().hex.encode('utf-8')).hexdigest()
         if expiration_period is None:
             expiration_period = settings.EXPIRATION_PERIOD
 
