@@ -41,7 +41,7 @@ class IndexView(TemplateView):
             client = IdealClient()
         except IdealConfigurationException as e:
             context.update({
-                'error_message': 'Cannot read configuration: {msg}'.format(msg=e.message)
+                'error_message': 'Cannot read configuration: {msg}'.format(msg=e)
             })
         else:
             if len(settings.PRIVATE_KEY_PASSWORD) > 5:
